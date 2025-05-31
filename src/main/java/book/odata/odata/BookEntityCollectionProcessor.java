@@ -4,8 +4,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Locale;
-
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
@@ -62,7 +60,7 @@ public class BookEntityCollectionProcessor implements EntityCollectionProcessor 
         EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
 
         // Fetch the data from our data source
-        EntityCollection entityCollection = getData(edmEntitySet);
+        EntityCollection entityCollection = getData(edmEntitySet, uriInfo);
 
         // Serialize
         ODataSerializer serializer = odata.createSerializer(responseFormat);
@@ -81,13 +79,18 @@ public class BookEntityCollectionProcessor implements EntityCollectionProcessor 
         response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
     }
 
-    private EntityCollection getData(EdmEntitySet edmEntitySet) {
+    private EntityCollection getData(EdmEntitySet edmEntitySet, UriInfo uriInfo) {
         EntityCollection entityCollection = new EntityCollection();
 
         String entitySetName = edmEntitySet.getName();
 
         if (BookEdmProvider.ES_BOOKS_NAME.equals(entitySetName)) {
             List<BookDto> books = odataBookService.getBooks(null, null, null, null);
+            
+            if (uriInfo.getOrderByOption() != null && !uriInfo.getOrderByOption().getOrders().isEmpty()) {
+                books = BookDto.sortBooks(books, uriInfo.getOrderByOption().getOrders());
+            }
+            
             for (BookDto book : books) {
                 entityCollection.getEntities().add(createBookEntity(book));
             }
@@ -99,6 +102,11 @@ public class BookEntityCollectionProcessor implements EntityCollectionProcessor 
             }
         } else if (BookEdmProvider.ES_BOOK_RESERVED_NAME.equals(entitySetName)) {
             List<BookReservedDto> books = odataBookService.getReservedBooks();
+            
+            if (uriInfo.getOrderByOption() != null && !uriInfo.getOrderByOption().getOrders().isEmpty()) {
+//                books = BooksHandler.sortBooks(books, uriInfo.getOrderByOption().getOrders());
+            }
+            
             for (BookReservedDto book : books) {
                 entityCollection.getEntities().add(createBookReservedEntity(book));
             }
