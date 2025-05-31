@@ -23,6 +23,7 @@ public class BookReservedDto {
 
     public static BookReservedDto build(Book book) {
         BookReservedDto dto = new BookReservedDto();
+        
         dto.setTitle(book.getTitle());
         dto.setAuthorSurname(book.getAuthorSurname());
         dto.setAuthorName(book.getAuthorName());

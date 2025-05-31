@@ -168,7 +168,8 @@ public class BookEdmProvider extends CsdlAbstractEdmProvider {
         return entityType;
     }
 
-    private CsdlEntityType getBookReservedEntityType() {
+    private CsdlEntityType getBookReservedEntityType() { 	         
+    	
         CsdlProperty title = new CsdlProperty().setName("title")
                 .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
         CsdlProperty authorSurname = new CsdlProperty().setName("authorSurname")

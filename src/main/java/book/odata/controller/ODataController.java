@@ -13,8 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import book.odata.odata.BookCollectionProcessor;
 import book.odata.odata.BookEdmProvider;
+import book.odata.odata.BookEntityCollectionProcessor;
 
 @RestController
 @RequestMapping("/odata")
@@ -24,7 +24,7 @@ public class ODataController {
     private BookEdmProvider edmProvider;
 
     @Autowired
-    private BookCollectionProcessor entityCollectionProcessor;
+    private BookEntityCollectionProcessor entityCollectionProcessor;
 
     @RequestMapping(value = "/**")
     public void process(HttpServletRequest request, HttpServletResponse response) {

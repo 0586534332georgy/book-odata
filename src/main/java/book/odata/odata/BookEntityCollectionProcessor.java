@@ -38,7 +38,7 @@ import book.odata.dto.BookReservedDto;
 import book.odata.odata.service.ODataBookService;
 
 @Component
-public class BookCollectionProcessor implements EntityCollectionProcessor {
+public class BookEntityCollectionProcessor implements EntityCollectionProcessor {
 
     @Autowired
     private ODataBookService odataBookService;
@@ -115,7 +115,7 @@ public class BookCollectionProcessor implements EntityCollectionProcessor {
                 .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
                     book.getBookGenre() != null ? book.getBookGenre().toString() : null));
 
-        entity.setId(createId("Books", book.getTitle()));
+//        entity.setId(createId("Books", book.getTitle()));
         return entity;
     }
 
@@ -129,7 +129,7 @@ public class BookCollectionProcessor implements EntityCollectionProcessor {
                     book.getBookGenre() != null ? book.getBookGenre().toString() : null))
                 .addProperty(new Property(null, "pagesAmount", ValueType.PRIMITIVE, book.getPagesAmount()));
 
-        entity.setId(createId("BookCredentials", book.getId()));
+//        entity.setId(createId("BookCredentials", book.getId()));
         return entity;
     }
 
@@ -142,7 +142,8 @@ public class BookCollectionProcessor implements EntityCollectionProcessor {
                     book.getBookGenre() != null ? book.getBookGenre().toString() : null))
                 .addProperty(new Property(null, "reservedDate", ValueType.PRIMITIVE, book.getReservedDate()));
 
-        entity.setId(createId("BookReserved", book.getTitle()));
+//        entity.setId(createId("BookReserved", book.getId()));
+//        entity.setId(createId("BookReserved", System.currentTimeMillis()));
         return entity;
     }
 
