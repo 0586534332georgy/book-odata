@@ -1,3 +1,5 @@
+http://localhost:8080/odata/$metadata
+
 http://localhost:8080/odata/Books
 
 http://localhost:8080/odata/Books(1)
@@ -18,3 +20,7 @@ http://localhost:8080/odata/Books(1)/status
 
 http://localhost:8080/odata/Books?$expand=status&$filter=status/reservedStatus eq true
 
+POST http://localhost:8080/odata/ReserveBook
+	{
+	    "title": "The Lord of the Rings"
+	}
