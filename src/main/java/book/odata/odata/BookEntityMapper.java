@@ -35,20 +35,20 @@ public class BookEntityMapper {
                 // Полное расширение - включаем данные
                 Entity credentialEntity = toCredentialEntity(book.getCredential(), odata);
                 Link credentialLink = new Link();
-                credentialLink.setTitle("Credential");
+                credentialLink.setTitle("credential");
                 credentialLink.setInlineEntity(credentialEntity);
                 entity.getNavigationLinks().add(credentialLink);
             } else {
                 // Явно указываем null для расширенного свойства
                 Link credentialLink = new Link();
-                credentialLink.setTitle("Credential");
+                credentialLink.setTitle("credential");
                 credentialLink.setInlineEntity(null);
                 entity.getNavigationLinks().add(credentialLink);
             }
         } else if (book.getCredential() != null) {
             // Только ссылка, если не расширяем
             Link credentialLink = new Link();
-            credentialLink.setTitle("Credential");
+            credentialLink.setTitle("credential");
             credentialLink.setHref("BookCredentials(" + book.getCredential().getId() + ")");
             entity.getNavigationLinks().add(credentialLink);
         }
@@ -59,20 +59,20 @@ public class BookEntityMapper {
                 // Полное расширение - включаем данные
                 Entity statusEntity = toStatusEntity(book.getStatus(), odata);
                 Link statusLink = new Link();
-                statusLink.setTitle("Status");
+                statusLink.setTitle("status");
                 statusLink.setInlineEntity(statusEntity);
                 entity.getNavigationLinks().add(statusLink);
             } else {
                 // Явно указываем null для расширенного свойства
                 Link statusLink = new Link();
-                statusLink.setTitle("Status");
+                statusLink.setTitle("status");
                 statusLink.setInlineEntity(null);
                 entity.getNavigationLinks().add(statusLink);
             }
         } else if (book.getStatus() != null) {
             // Только ссылка, если не расширяем
             Link statusLink = new Link();
-            statusLink.setTitle("Status");
+            statusLink.setTitle("status");
             statusLink.setHref("BookStatuses(" + book.getStatus().getId() + ")");
             entity.getNavigationLinks().add(statusLink);
         }

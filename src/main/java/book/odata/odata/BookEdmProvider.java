@@ -61,8 +61,8 @@ public class BookEdmProvider extends CsdlAbstractEdmProvider {
                     new CsdlProperty().setName("title").setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(500)
                 ))
                 .setNavigationProperties(List.of(
-                    new CsdlNavigationProperty().setName("Credential").setType(ET_CREDENTIAL_FQN).setNullable(true).setPartner("book"),
-                    new CsdlNavigationProperty().setName("Status").setType(ET_STATUS_FQN).setNullable(true).setPartner("book")
+                    new CsdlNavigationProperty().setName("credential").setType(ET_CREDENTIAL_FQN).setNullable(true).setPartner("book"),
+                    new CsdlNavigationProperty().setName("status").setType(ET_STATUS_FQN).setNullable(true).setPartner("book")
                 ));
         }
 
