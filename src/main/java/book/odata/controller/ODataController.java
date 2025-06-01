@@ -13,6 +13,7 @@ import org.apache.olingo.server.api.ServiceMetadata;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import book.odata.odata.BookActionProcessor;
 import book.odata.odata.BookEdmProvider;
 import book.odata.odata.BookEntityCollectionProcessor;
 import book.odata.odata.BookEntityProcessor;
@@ -23,10 +24,9 @@ import book.odata.odata.BookEntityProcessor;
 public class ODataController {
 
     final private BookEdmProvider edmProvider;
-
     final private BookEntityProcessor entityProcessor;
-
     final private BookEntityCollectionProcessor collectionProcessor;
+    final private BookActionProcessor actionProcessor;
         
 
     @RequestMapping(value = "/**")
@@ -40,6 +40,7 @@ public class ODataController {
             // Register processors
             handler.register(entityProcessor);
             handler.register(collectionProcessor);
+            handler.register(actionProcessor);
 
             // Let the handler do the work
             handler.process(new HttpServletRequestWrapper(request) {

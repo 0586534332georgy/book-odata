@@ -4,16 +4,11 @@ import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.ContextURL.Suffix;
 import org.apache.olingo.commons.api.data.Entity;
-import org.apache.olingo.commons.api.data.Parameter;
-import org.apache.olingo.commons.api.data.Property;
-import org.apache.olingo.commons.api.data.ValueType;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpHeader;
@@ -23,14 +18,12 @@ import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.ServiceMetadata;
-import org.apache.olingo.server.api.deserializer.DeserializerException;
 import org.apache.olingo.server.api.processor.EntityProcessor;
 import org.apache.olingo.server.api.serializer.EntitySerializerOptions;
 import org.apache.olingo.server.api.serializer.SerializerException;
 import org.apache.olingo.server.api.serializer.SerializerResult;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriResource;
-import org.apache.olingo.server.api.uri.UriResourceAction;
 import org.apache.olingo.server.api.uri.UriResourceEntitySet;
 import org.apache.olingo.server.api.uri.UriResourceNavigation;
 import org.springframework.stereotype.Component;
@@ -196,37 +189,6 @@ public class BookEntityProcessor implements EntityProcessor {
 
 	@Override
 	public void deleteEntity(ODataRequest r, ODataResponse s, UriInfo u) {
-	}
-
-	public void process(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,
-			ContentType responseFormat) throws ODataApplicationException, SerializerException, DeserializerException {
-
-		UriResource resource = uriInfo.getUriResourceParts().get(0);
-
-		if (resource instanceof UriResourceAction actionResource) {
-			String actionName = actionResource.getAction().getName();
-
-			Map<String, Parameter> params = OData.newInstance().createDeserializer(requestFormat)
-					.actionParameters(request.getBody(), actionResource.getAction()).getActionParameters();
-
-			String title = Optional.ofNullable(params.get("title")).map(Parameter::getValue).map(Object::toString)
-					.orElseThrow(() -> new ODataApplicationException("Missing 'title'", 400, Locale.ENGLISH));
-
-			int result = switch (actionName) {
-			case "ReserveBook" -> bookService.setBookReserved(title);
-			case "FreeBook" -> bookService.setBookFree(title);
-			default -> throw new ODataApplicationException("Unknown action", 400, Locale.ENGLISH);
-			};
-
-			Entity responseEntity = new Entity();
-			responseEntity.addProperty(new Property(null, "result", ValueType.PRIMITIVE, result));
-
-			SerializerResult serialized = OData.newInstance().createSerializer(responseFormat).entity(null, null,
-					responseEntity, EntitySerializerOptions.with().build());
-
-			response.setContent(serialized.getContent());
-			response.setStatusCode(200);
-			response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
-		}
-	}
+	}	
+	
 }
