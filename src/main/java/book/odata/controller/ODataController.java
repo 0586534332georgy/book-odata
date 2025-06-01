@@ -1,8 +1,9 @@
 package book.odata.controller;
 
-import java.util.List;
+import java.util.ArrayList;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -15,28 +16,43 @@ import org.springframework.web.bind.annotation.RestController;
 import book.odata.odata.BookEdmProvider;
 import book.odata.odata.BookEntityCollectionProcessor;
 import book.odata.odata.BookEntityProcessor;
-import book.odata.service.BookService;
 
 @RestController
 @RequestMapping("/odata")
 @RequiredArgsConstructor
 public class ODataController {
 
-	private final BookService bookService;
+    final private BookEdmProvider edmProvider;
+
+    final private BookEntityProcessor entityProcessor;
+
+    final private BookEntityCollectionProcessor collectionProcessor;
+        
 
     @RequestMapping(value = "/**")
-    public void handle(HttpServletRequest request, HttpServletResponse response) {
+    public void process(HttpServletRequest request, HttpServletResponse response) {
         try {
+            // Create OData Handler and configure it with EDM provider
             OData odata = OData.newInstance();
-            ServiceMetadata edm = odata.createServiceMetadata(new BookEdmProvider(), List.of());
-
+            ServiceMetadata edm = odata.createServiceMetadata(edmProvider, new ArrayList<>());
             ODataHttpHandler handler = odata.createHandler(edm);
-            handler.register(new BookEntityCollectionProcessor(bookService));
-            handler.register(new BookEntityProcessor(bookService));
-            handler.process(request, response);
 
+            // Register processors
+            handler.register(entityProcessor);
+            handler.register(collectionProcessor);
+
+            // Let the handler do the work
+            handler.process(new HttpServletRequestWrapper(request) {
+                // Spring's HttpServletRequest doesn't behave exactly the same as the default servlet API
+                // implementation with regard to URL processing. This fixes that.
+                @Override
+                public String getServletPath() {
+                    return "/odata";
+                }
+            }, response);
         } catch (RuntimeException e) {
-            response.setStatus(500);
+            throw new RuntimeException("OData processing failed", e);
         }
     }
 }
+

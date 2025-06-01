@@ -5,10 +5,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.olingo.commons.api.data.ContextURL;
+import org.apache.olingo.commons.api.data.ContextURL.Suffix;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.Parameter;
 import org.apache.olingo.commons.api.data.Property;
 import org.apache.olingo.commons.api.data.ValueType;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
@@ -19,6 +22,7 @@ import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.ServiceMetadata;
 import org.apache.olingo.server.api.deserializer.DeserializerException;
 import org.apache.olingo.server.api.processor.EntityProcessor;
+import org.apache.olingo.server.api.serializer.EntityCollectionSerializerOptions;
 import org.apache.olingo.server.api.serializer.EntitySerializerOptions;
 import org.apache.olingo.server.api.serializer.SerializerException;
 import org.apache.olingo.server.api.serializer.SerializerResult;
@@ -61,8 +65,16 @@ public class BookEntityProcessor implements EntityProcessor {
 	                HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), Locale.ENGLISH);
 		}
 
-		SerializerResult serializerResult = odata.createSerializer(responseFormat).entity(serviceMetadata,
-				entitySet.getEntityType(), entity, EntitySerializerOptions.with().build());
+        UriResourceEntitySet uriEntitySet = (UriResourceEntitySet) uriInfo.getUriResourceParts().get(0);
+        
+        EdmEntitySet edmEntitySet = uriEntitySet.getEntitySet();
+        
+        ContextURL contextUrl = ContextURL.with().entitySet(edmEntitySet).suffix(Suffix.ENTITY).build();
+        EntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextUrl).build();
+
+        SerializerResult serializerResult = odata
+            .createSerializer(responseFormat)
+            .entity(serviceMetadata, edmEntitySet.getEntityType(), entity, opts);
 
 		response.setContent(serializerResult.getContent());
 		response.setStatusCode(HttpStatusCode.OK.getStatusCode());

@@ -11,7 +11,7 @@ import book.odata.entity.Book;
 import book.odata.service.BookService;
 
 
-@Service
+//@Service
 public class ODataBookService {
 
     @Autowired

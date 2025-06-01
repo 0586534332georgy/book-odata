@@ -4,6 +4,7 @@ import book.odata.entity.Book;
 import book.odata.service.BookService;
 import lombok.RequiredArgsConstructor;
 import org.apache.olingo.commons.api.data.*;
+import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
@@ -16,10 +17,13 @@ import org.apache.olingo.server.api.processor.EntityCollectionProcessor;
 import org.apache.olingo.server.api.serializer.*;
 import org.apache.olingo.server.api.uri.*;
 import org.apache.olingo.server.api.uri.queryoption.CustomQueryOption;
+import org.springframework.stereotype.Component;
+
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Component
 @RequiredArgsConstructor
 public class BookEntityCollectionProcessor implements EntityCollectionProcessor {
 
@@ -85,9 +89,18 @@ public class BookEntityCollectionProcessor implements EntityCollectionProcessor 
             }
         };
 
-        SerializerResult serializerResult = odata.createSerializer(responseFormat)
-            .entityCollection(serviceMetadata, entitySet.getEntityType(), entityCollection, EntityCollectionSerializerOptions.with().build());
+        UriResourceEntitySet uriEntitySet = (UriResourceEntitySet) uriInfo.getUriResourceParts().get(0);
+        
+        EdmEntitySet edmEntitySet = uriEntitySet.getEntitySet();
 
+        EntityCollectionSerializerOptions opts = EntityCollectionSerializerOptions.with()
+            .contextURL(ContextURL.with().entitySet(edmEntitySet).build())
+            .build();
+
+        SerializerResult serializerResult = odata
+            .createSerializer(responseFormat)
+            .entityCollection(serviceMetadata, edmEntitySet.getEntityType(), entityCollection, opts);
+        	
         response.setContent(serializerResult.getContent());
         response.setStatusCode(HttpStatusCode.OK.getStatusCode());
         response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
