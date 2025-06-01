@@ -1,8 +1,6 @@
 package book.odata.odata;
 
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.Entity;
@@ -30,9 +28,7 @@ import org.apache.olingo.server.api.uri.UriResourceEntitySet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import book.odata.dto.BookCredentialsDto;
-import book.odata.dto.BookDto;
-import book.odata.dto.BookReservedDto;
+import book.odata.entity.Book;
 import book.odata.odata.service.ODataBookService;
 
 @Component
@@ -85,87 +81,32 @@ public class BookEntityCollectionProcessor implements EntityCollectionProcessor 
         String entitySetName = edmEntitySet.getName();
 
         if (BookEdmProvider.ES_BOOKS_NAME.equals(entitySetName)) {
-            List<BookDto> books = odataBookService.getBooks(null, null, null, null);
+            List<Book> books = odataBookService.getBooks(null, null, null, null);
             
             if (uriInfo.getOrderByOption() != null && !uriInfo.getOrderByOption().getOrders().isEmpty()) {
-                books = BookDto.sortBooks(books, uriInfo.getOrderByOption().getOrders());
+                books = Book.sortBooks(books, uriInfo.getOrderByOption().getOrders());
             }
             
-            for (BookDto book : books) {
+            for (Book book : books) {
                 entityCollection.getEntities().add(createBookEntity(book));
             }
-        } else if (BookEdmProvider.ES_BOOK_CREDENTIALS_NAME.equals(entitySetName)) {
-            // Для примера, получаем все Fantasy книги
-            List<BookCredentialsDto> books = odataBookService.getBookCredentials(book.odata.api.BookGenreEnum.Fantasy, null, null);
-            for (BookCredentialsDto book : books) {
-                entityCollection.getEntities().add(createBookCredentialsEntity(book));
-            }
-        } else if (BookEdmProvider.ES_BOOK_RESERVED_NAME.equals(entitySetName)) {
-            List<BookReservedDto> books = odataBookService.getReservedBooks();
-            
-            if (uriInfo.getOrderByOption() != null && !uriInfo.getOrderByOption().getOrders().isEmpty()) {
-//                books = BooksHandler.sortBooks(books, uriInfo.getOrderByOption().getOrders());
-            }
-            
-            for (BookReservedDto book : books) {
-                entityCollection.getEntities().add(createBookReservedEntity(book));
-            }
+
         }
 
         return entityCollection;
     }
 
-    private Entity createBookEntity(BookDto book) {
+    private Entity createBookEntity(Book book) {
         Entity entity = new Entity()
+        		.addProperty(new Property(null, "id", ValueType.PRIMITIVE, book.getId()))
                 .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
                 .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
                 .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
                 .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null));
+                    book.getCredential() != null ? book.getCredential().getBookGenre().toString() : null));
 
-//        entity.setId(createId("Books", book.getTitle()));
         return entity;
     }
 
-    private Entity createBookCredentialsEntity(BookCredentialsDto book) {
-        Entity entity = new Entity()
-                .addProperty(new Property(null, "id", ValueType.PRIMITIVE, book.getId()))
-                .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
-                .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
-                .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
-                .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null))
-                .addProperty(new Property(null, "pagesAmount", ValueType.PRIMITIVE, book.getPagesAmount()));
 
-//        entity.setId(createId("BookCredentials", book.getId()));
-        return entity;
-    }
-
-    private Entity createBookReservedEntity(BookReservedDto book) {
-        Entity entity = new Entity()
-                .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
-                .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
-                .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
-                .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null))
-                .addProperty(new Property(null, "reservedDate", ValueType.PRIMITIVE, book.getReservedDate()));
-
-//        entity.setId(createId("BookReserved", book.getId()));
-//        entity.setId(createId("BookReserved", System.currentTimeMillis()));
-        return entity;
-    }
-
-    private URI createId(String entitySetName, Object id) {
-        try {
-            return new URI(entitySetName + "(" + String.valueOf(id) + ")");
-        } catch (URISyntaxException e) {
-            throw new ODataRuntimeException("Unable to create id for entity: " + entitySetName, e);
-        }
-    }
-
-    public static class ODataRuntimeException extends RuntimeException {
-        public ODataRuntimeException(String message, Throwable cause) {
-            super(message, cause);
-        }
-    }
 }

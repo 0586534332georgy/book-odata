@@ -90,21 +90,13 @@ public class BookEntityProcessor implements EntityProcessor {
         
         if (BookEdmProvider.ES_BOOKS_NAME.equals(entitySetName)) {
             String title = getKeyValue(keyPredicates, "title");
-            List<BookDto> books = bookService.getAll2();
-            for (BookDto book : books) {
+            List<Book> books = bookService.getAll();
+            for (Book book : books) {
                 if (book.getTitle().equals(title)) {
                     return createBookEntity(book);
                 }
             }
-        } else if (BookEdmProvider.ES_BOOK_CREDENTIALS_NAME.equals(entitySetName)) {
-            Integer id = Integer.valueOf(getKeyValue(keyPredicates, "id"));
-            List<BookCredentialsDto> books = bookService.getBooksByGenre(book.odata.api.BookGenreEnum.Fantasy);
-            for (BookCredentialsDto book : books) {
-                if (book.getId().equals(id)) {
-                    return createBookCredentialsEntity(book);
-                }
-            }
-        }
+
         
         return null;
     }
@@ -118,39 +110,19 @@ public class BookEntityProcessor implements EntityProcessor {
         return null;
     }
 
-    private Entity createBookEntity(BookDto book) {
+    private Entity createBookEntity(Book book) {
         Entity entity = new Entity()
+        		.addProperty(new Property(null, "id", ValueType.PRIMITIVE, book.getId()))
                 .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
                 .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
                 .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
                 .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null));
-
-        entity.setId(createId("Books", book.getTitle()));
+                		book.getCredential() != null ? book.getCredential().getBookGenre().toString() : null));
+        
         return entity;
     }
 
-    private Entity createBookCredentialsEntity(BookCredentialsDto book) {
-        Entity entity = new Entity()
-                .addProperty(new Property(null, "id", ValueType.PRIMITIVE, book.getId()))
-                .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
-                .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
-                .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
-                .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null))
-                .addProperty(new Property(null, "pagesAmount", ValueType.PRIMITIVE, book.getPagesAmount()));
-
-        entity.setId(createId("BookCredentials", book.getId()));
-        return entity;
-    }
-
-    private URI createId(String entitySetName, Object id) {
-        try {
-            return new URI(entitySetName + "(" + String.valueOf(id) + ")");
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Unable to create id for entity: " + entitySetName, e);
-        }
-    }
+   
 
     @Override
     public void createEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,

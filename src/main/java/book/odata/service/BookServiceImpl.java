@@ -27,6 +27,10 @@ public class BookServiceImpl implements BookService {
 	public List<Book> getAll() {
 		return bookRepo.findAll();
 	}  
+	
+	public Book findById(int id) {
+		return bookRepo.findById(id).orElseThrow(() -> new RuntimeException("id not found"));
+	}
 
 
 
