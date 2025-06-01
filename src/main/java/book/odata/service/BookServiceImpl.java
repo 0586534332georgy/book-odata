@@ -32,8 +32,6 @@ public class BookServiceImpl implements BookService {
 		return bookRepo.findById(id).orElseThrow(() -> new RuntimeException("id not found"));
 	}
 
-
-
     @Override
     public int setBookReserved(String title) {
     	int res = 0;
