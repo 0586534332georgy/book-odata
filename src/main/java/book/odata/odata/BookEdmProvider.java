@@ -37,9 +37,6 @@ public class BookEdmProvider extends CsdlAbstractEdmProvider {
 	public static final FullQualifiedName ACTION_RESERVE_BOOK_FQN = new FullQualifiedName(NAMESPACE,
 			ACTION_RESERVE_BOOK);
 	public static final FullQualifiedName ACTION_FREE_BOOK_FQN = new FullQualifiedName(NAMESPACE, ACTION_FREE_BOOK);
-	
-	public static final String ET_RESULT_NAME = "ResultEntity";
-	public static final FullQualifiedName ET_RESULT_FQN = new FullQualifiedName(NAMESPACE, ET_RESULT_NAME);
 
 	@Override
 	public List<CsdlSchema> getSchemas() {
@@ -52,13 +49,6 @@ public class BookEdmProvider extends CsdlAbstractEdmProvider {
 
 	@Override
 	public CsdlEntityType getEntityType(FullQualifiedName fqn) {
-	    if (fqn.equals(ET_RESULT_FQN)) {
-	        return new CsdlEntityType()
-	            .setName(ET_RESULT_NAME)
-	            .setProperties(List.of(
-	                new CsdlProperty().setName("value").setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName())
-	            ));
-	    }
 		if (fqn.equals(ET_BOOK_FQN)) {
 			return new CsdlEntityType().setName(ET_BOOK_NAME).setKey(List.of(new CsdlPropertyRef().setName("id")))
 					.setProperties(List.of(

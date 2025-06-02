@@ -1,18 +1,12 @@
 package book.odata.odata;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.olingo.commons.api.data.ContextURL;
-import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.Parameter;
-import org.apache.olingo.commons.api.data.Property;
-import org.apache.olingo.commons.api.data.ValueType;
-import org.apache.olingo.commons.api.edm.EdmEntityType;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveType;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
@@ -22,13 +16,8 @@ import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.ServiceMetadata;
 import org.apache.olingo.server.api.deserializer.DeserializerException;
-import org.apache.olingo.server.api.processor.ActionEntityProcessor;
 import org.apache.olingo.server.api.processor.ActionPrimitiveProcessor;
-import org.apache.olingo.server.api.serializer.EntitySerializerOptions;
-import org.apache.olingo.server.api.serializer.ODataSerializer;
-import org.apache.olingo.server.api.serializer.PrimitiveSerializerOptions;
 import org.apache.olingo.server.api.serializer.SerializerException;
-import org.apache.olingo.server.api.serializer.SerializerResult;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriResource;
 import org.apache.olingo.server.api.uri.UriResourceAction;
@@ -78,29 +67,8 @@ public class BookActionProcessor implements ActionPrimitiveProcessor {
                         HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.ENGLISH);
             };
 
-            ContextURL contextUrl = ContextURL.with().build(); // ← ключевая строка
-
-			Entity responseEntity = new Entity();
-			responseEntity.addProperty(new Property(null, "value", ValueType.PRIMITIVE, result));
-			
-			EntitySerializerOptions options = EntitySerializerOptions
-			    .with()
-			    .contextURL(contextUrl) // ← обязательно
-			    .build();
-			
-			EdmEntityType dummyEntityType = serviceMetadata.getEdm()
-				    .getEntityType(new FullQualifiedName("book.odata", "ResultEntity")); // ← важно
-			
-			ODataSerializer serializer = odata.createSerializer(responseFormat);
-			
-			SerializerResult serialized = serializer.entity(
-			    serviceMetadata, 
-			    dummyEntityType, // entityType = null для динамической entity
-			    responseEntity, 
-			    options
-			);
-
-            response.setContent(serialized.getContent());
+			String json = "{\"value\":" + result + "}";
+			response.setContent(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
             response.setStatusCode(HttpStatusCode.OK.getStatusCode());
             response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
         } else {
