@@ -1,9 +1,10 @@
 package book.odata.entity;
 
+import javax.persistence.*;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import book.odata.api.BookGenreEnum;
-import jakarta.persistence.*;
 import lombok.*;
 
 @Getter

@@ -2,10 +2,11 @@ package book.odata.entity;
 
 import java.time.LocalDate;
 
+import javax.persistence.*;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import book.odata.api.BookStatusEnum;
-import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
