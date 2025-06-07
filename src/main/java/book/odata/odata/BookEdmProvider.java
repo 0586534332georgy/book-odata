@@ -1,191 +1,195 @@
 package book.odata.odata;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
-import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
-import org.apache.olingo.commons.api.edm.provider.CsdlEntityContainer;
-import org.apache.olingo.commons.api.edm.provider.CsdlEntityContainerInfo;
-import org.apache.olingo.commons.api.edm.provider.CsdlEntitySet;
-import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
-import org.apache.olingo.commons.api.edm.provider.CsdlProperty;
-import org.apache.olingo.commons.api.edm.provider.CsdlPropertyRef;
-import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.apache.olingo.commons.api.edm.provider.*;
 import org.springframework.stereotype.Component;
 
 @Component
 public class BookEdmProvider extends CsdlAbstractEdmProvider {
+	// Namespace
+	public static final String NAMESPACE = "book.odata";
 
-    // Service Namespace
-    public static final String NAMESPACE = "BookLibrary";
+	// EDM Container
+	public static final String CONTAINER_NAME = "Container";
+	public static final FullQualifiedName CONTAINER = new FullQualifiedName(NAMESPACE, CONTAINER_NAME);
 
-    // EDM Container
-    public static final String CONTAINER_NAME = "Container";
-    public static final FullQualifiedName CONTAINER = new FullQualifiedName(NAMESPACE, CONTAINER_NAME);
+	// Entity types
+	public static final String ET_BOOK_NAME = "Book";
+	public static final String ET_CREDENTIAL_NAME = "BookCredential";
+	public static final String ET_STATUS_NAME = "BookStatus";
 
-    // Entity Types Names
-    public static final String ET_BOOK_NAME = "Book";
-    public static final FullQualifiedName ET_BOOK_FQN = new FullQualifiedName(NAMESPACE, ET_BOOK_NAME);
+	public static final FullQualifiedName ET_BOOK_FQN = new FullQualifiedName(NAMESPACE, ET_BOOK_NAME);
+	public static final FullQualifiedName ET_CREDENTIAL_FQN = new FullQualifiedName(NAMESPACE, ET_CREDENTIAL_NAME);
+	public static final FullQualifiedName ET_STATUS_FQN = new FullQualifiedName(NAMESPACE, ET_STATUS_NAME);
 
-    public static final String ET_BOOK_CREDENTIALS_NAME = "BookCredentials";
-    public static final FullQualifiedName ET_BOOK_CREDENTIALS_FQN = new FullQualifiedName(NAMESPACE, ET_BOOK_CREDENTIALS_NAME);
+	// Entity sets
+	public static final String ES_BOOKS_NAME = "Books";
+	public static final String ES_CREDENTIALS_NAME = "BookCredentials";
+	public static final String ES_STATUSES_NAME = "BookStatuses";
 
-    public static final String ET_BOOK_RESERVED_NAME = "BookReserved";
-    public static final FullQualifiedName ET_BOOK_RESERVED_FQN = new FullQualifiedName(NAMESPACE, ET_BOOK_RESERVED_NAME);
+	// Actions
+	public static final String ACTION_RESERVE_BOOK = "ReserveBook";
+	public static final String ACTION_FREE_BOOK = "FreeBook";
+	public static final FullQualifiedName ACTION_RESERVE_BOOK_FQN = new FullQualifiedName(NAMESPACE,
+			ACTION_RESERVE_BOOK);
+	public static final FullQualifiedName ACTION_FREE_BOOK_FQN = new FullQualifiedName(NAMESPACE, ACTION_FREE_BOOK);
 
-    // Entity Set Names
-    public static final String ES_BOOKS_NAME = "Books";
-    public static final String ES_BOOK_CREDENTIALS_NAME = "BookCredentials";
-    public static final String ES_BOOK_RESERVED_NAME = "BookReserved";
+	@Override
+	public List<CsdlSchema> getSchemas() {
+		return List.of(new CsdlSchema().setNamespace(NAMESPACE)
+				.setEntityTypes(List.of(getEntityType(ET_BOOK_FQN), getEntityType(ET_CREDENTIAL_FQN),
+						getEntityType(ET_STATUS_FQN)))
+				.setActions(Arrays.asList(getAction(ACTION_RESERVE_BOOK_FQN), getAction(ACTION_FREE_BOOK_FQN)))
+				.setEntityContainer(getEntityContainer()));
+	}
 
-    @Override
-    public CsdlEntityType getEntityType(FullQualifiedName entityTypeName) {
-        if (entityTypeName.equals(ET_BOOK_FQN)) {
-            return getBookEntityType();
-        } else if (entityTypeName.equals(ET_BOOK_CREDENTIALS_FQN)) {
-            return getBookCredentialsEntityType();
-        } else if (entityTypeName.equals(ET_BOOK_RESERVED_FQN)) {
-            return getBookReservedEntityType();
-        }
-        return null;
-    }
+	@Override
+	public CsdlEntityType getEntityType(FullQualifiedName fqn) {
+		if (fqn.equals(ET_BOOK_FQN)) {
+			return new CsdlEntityType().setName(ET_BOOK_NAME).setKey(List.of(new CsdlPropertyRef().setName("id")))
+					.setProperties(List.of(
+							new CsdlProperty().setName("id").setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName())
+									.setNullable(false),
+							new CsdlProperty().setName("authorSurname")
+									.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(255),
+							new CsdlProperty().setName("authorName")
+									.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(255),
+							new CsdlProperty().setName("title")
+									.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(500)))
+					.setNavigationProperties(List.of(
+							new CsdlNavigationProperty().setName("credential").setType(ET_CREDENTIAL_FQN)
+									.setNullable(true).setPartner("book"),
+							new CsdlNavigationProperty().setName("status").setType(ET_STATUS_FQN).setNullable(true)
+									.setPartner("book")));
+		}
 
-    @Override
-    public CsdlEntitySet getEntitySet(FullQualifiedName entityContainer, String entitySetName) {
-        if (entityContainer.equals(CONTAINER)) {
-            if (entitySetName.equals(ES_BOOKS_NAME)) {
-                CsdlEntitySet entitySet = new CsdlEntitySet();
-                entitySet.setName(ES_BOOKS_NAME);
-                entitySet.setType(ET_BOOK_FQN);
-                return entitySet;
-            } else if (entitySetName.equals(ES_BOOK_CREDENTIALS_NAME)) {
-                CsdlEntitySet entitySet = new CsdlEntitySet();
-                entitySet.setName(ES_BOOK_CREDENTIALS_NAME);
-                entitySet.setType(ET_BOOK_CREDENTIALS_FQN);
-                return entitySet;
-            } else if (entitySetName.equals(ES_BOOK_RESERVED_NAME)) {
-                CsdlEntitySet entitySet = new CsdlEntitySet();
-                entitySet.setName(ES_BOOK_RESERVED_NAME);
-                entitySet.setType(ET_BOOK_RESERVED_FQN);
-                return entitySet;
-            }
-        }
-        return null;
-    }
+		if (fqn.equals(ET_CREDENTIAL_FQN)) {
+			return new CsdlEntityType().setName(ET_CREDENTIAL_NAME).setKey(List.of(new CsdlPropertyRef().setName("id")))
+					.setProperties(List.of(
+							new CsdlProperty().setName("id").setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName())
+									.setNullable(false),
+							new CsdlProperty().setName("bookGenre")
+									.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(50),
+							new CsdlProperty().setName("pagesAmount")
+									.setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName())))
+					.setNavigationProperties(List.of(new CsdlNavigationProperty().setName("book").setType(ET_BOOK_FQN)
+							.setNullable(false).setPartner("credential")));
+		}
 
-    @Override
-    public CsdlEntityContainer getEntityContainer() {
-        // create EntitySets
-        List<CsdlEntitySet> entitySets = new ArrayList<>();
-        entitySets.add(getEntitySet(CONTAINER, ES_BOOKS_NAME));
-        entitySets.add(getEntitySet(CONTAINER, ES_BOOK_CREDENTIALS_NAME));
-        entitySets.add(getEntitySet(CONTAINER, ES_BOOK_RESERVED_NAME));
+		if (fqn.equals(ET_STATUS_FQN)) {
+			return new CsdlEntityType().setName(ET_STATUS_NAME).setKey(List.of(new CsdlPropertyRef().setName("id")))
+					.setProperties(List.of(
+							new CsdlProperty().setName("id").setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName())
+									.setNullable(false),
+							new CsdlProperty().setName("reservedStatus")
+									.setType(EdmPrimitiveTypeKind.Boolean.getFullQualifiedName()),
+							new CsdlProperty().setName("reservedDate")
+									.setType(EdmPrimitiveTypeKind.Date.getFullQualifiedName()),
+							new CsdlProperty().setName("conditionStatus")
+									.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setMaxLength(50)))
+					.setNavigationProperties(List.of(new CsdlNavigationProperty().setName("book").setType(ET_BOOK_FQN)
+							.setNullable(false).setPartner("status")));
+		}
 
-        // create EntityContainer
-        CsdlEntityContainer entityContainer = new CsdlEntityContainer();
-        entityContainer.setName(CONTAINER_NAME);
-        entityContainer.setEntitySets(entitySets);
+		return null;
+	}
 
-        return entityContainer;
-    }
+	public CsdlAction getAction(FullQualifiedName actionName) {
+		if (actionName.equals(ACTION_RESERVE_BOOK_FQN)) {
+			return new CsdlAction().setName(ACTION_RESERVE_BOOK)
+					.setParameters(List.of(new CsdlParameter().setName("title")
+							.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setNullable(false)))
+					.setReturnType(new CsdlReturnType().setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName()));
+		}
 
-    @Override
-    public CsdlEntityContainerInfo getEntityContainerInfo(FullQualifiedName entityContainerName) {
-        if (entityContainerName == null || entityContainerName.equals(CONTAINER)) {
-            CsdlEntityContainerInfo entityContainerInfo = new CsdlEntityContainerInfo();
-            entityContainerInfo.setContainerName(CONTAINER);
-            return entityContainerInfo;
-        }
-        return null;
-    }
+		if (actionName.equals(ACTION_FREE_BOOK_FQN)) {
+			return new CsdlAction().setName(ACTION_FREE_BOOK)
+					.setParameters(List.of(new CsdlParameter().setName("title")
+							.setType(EdmPrimitiveTypeKind.String.getFullQualifiedName()).setNullable(false)))
+					.setReturnType(new CsdlReturnType().setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName()));
+		}
 
-    @Override
-    public List<CsdlSchema> getSchemas() {
-        // create Schema
-        CsdlSchema schema = new CsdlSchema();
-        schema.setNamespace(NAMESPACE);
+		return null;
+	}
 
-        // add EntityTypes
-        List<CsdlEntityType> entityTypes = new ArrayList<>();
-        entityTypes.add(getEntityType(ET_BOOK_FQN));
-        entityTypes.add(getEntityType(ET_BOOK_CREDENTIALS_FQN));
-        entityTypes.add(getEntityType(ET_BOOK_RESERVED_FQN));
-        schema.setEntityTypes(entityTypes);
+	@Override
+	public List<CsdlAction> getActions(FullQualifiedName actionName) {
+		if (actionName.equals(ACTION_RESERVE_BOOK_FQN)) {
+			return List.of(getAction(ACTION_RESERVE_BOOK_FQN));
+		}
+		if (actionName.equals(ACTION_FREE_BOOK_FQN)) {
+			return List.of(getAction(ACTION_FREE_BOOK_FQN));
+		}
+		return null;
+	}
+	
+	@Override
+	public CsdlActionImport getActionImport(FullQualifiedName entityContainer, String actionImportName) {
+	    if (entityContainer.equals(CONTAINER)) {
+	        if (ACTION_RESERVE_BOOK.equals(actionImportName)) {
+	            return new CsdlActionImport()
+	                    .setName(ACTION_RESERVE_BOOK)
+	                    .setAction(ACTION_RESERVE_BOOK_FQN);
+	        } else if (ACTION_FREE_BOOK.equals(actionImportName)) {
+	            return new CsdlActionImport()
+	                    .setName(ACTION_FREE_BOOK)
+	                    .setAction(ACTION_FREE_BOOK_FQN);
+	        }
+	    }
+	    return null;
+	}
 
-        // add EntityContainer
-        schema.setEntityContainer(getEntityContainer());
 
-        // finally
-        List<CsdlSchema> schemas = new ArrayList<>();
-        schemas.add(schema);
+	@Override
+	public CsdlEntitySet getEntitySet(FullQualifiedName container, String entitySetName) {
+		if (container.equals(CONTAINER)) {
+			return switch (entitySetName) {
+			case ES_BOOKS_NAME -> new CsdlEntitySet().setName(ES_BOOKS_NAME).setType(ET_BOOK_FQN)
+					.setNavigationPropertyBindings(List.of(
+							new CsdlNavigationPropertyBinding().setPath("credential").setTarget(ES_CREDENTIALS_NAME),
+							new CsdlNavigationPropertyBinding().setPath("status").setTarget(ES_STATUSES_NAME)));
+			case ES_CREDENTIALS_NAME -> new CsdlEntitySet().setName(ES_CREDENTIALS_NAME).setType(ET_CREDENTIAL_FQN)
+					.setNavigationPropertyBindings(
+							List.of(new CsdlNavigationPropertyBinding().setPath("book").setTarget(ES_BOOKS_NAME)));
+			case ES_STATUSES_NAME ->
+				new CsdlEntitySet().setName(ES_STATUSES_NAME).setType(ET_STATUS_FQN).setNavigationPropertyBindings(
+						List.of(new CsdlNavigationPropertyBinding().setPath("book").setTarget(ES_BOOKS_NAME)));
+			default -> null;
+			};
+		}
+		return null;
+	}
 
-        return schemas;
-    }
+	@Override
+	public CsdlEntityContainer getEntityContainer() {
+		CsdlActionImport reserveBookImport = new CsdlActionImport().setName(ACTION_RESERVE_BOOK)
+				.setAction(ACTION_RESERVE_BOOK_FQN);
 
-    private CsdlEntityType getBookEntityType() {
-        // create EntityType properties
-        CsdlProperty title = new CsdlProperty().setName("title")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty authorSurname = new CsdlProperty().setName("authorSurname")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty authorName = new CsdlProperty().setName("authorName")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty bookGenre = new CsdlProperty().setName("bookGenre")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
+		CsdlActionImport freeBookImport = new CsdlActionImport().setName(ACTION_FREE_BOOK)
+				.setAction(ACTION_FREE_BOOK_FQN);
 
-        // configure EntityType
-        CsdlEntityType entityType = new CsdlEntityType();
-        entityType.setName(ET_BOOK_NAME);
-        entityType.setProperties(Arrays.asList(title, authorSurname, authorName, bookGenre));
-        entityType.setKey(Collections.singletonList(new CsdlPropertyRef().setName("title")));
+		return new CsdlEntityContainer()
+				.setName(CONTAINER_NAME)
+				.setEntitySets(List.of(
+						getEntitySet(CONTAINER, ES_BOOKS_NAME),
+						getEntitySet(CONTAINER, ES_CREDENTIALS_NAME), 
+						getEntitySet(CONTAINER, ES_STATUSES_NAME)))
+				.setActionImports(
+						List.of(
+				           reserveBookImport,
+					       freeBookImport
+					       ));
+	}
 
-        return entityType;
-    }
-
-    private CsdlEntityType getBookCredentialsEntityType() {
-        CsdlProperty id = new CsdlProperty().setName("id")
-                .setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName());
-        CsdlProperty authorSurname = new CsdlProperty().setName("authorSurname")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty authorName = new CsdlProperty().setName("authorName")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty title = new CsdlProperty().setName("title")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty bookGenre = new CsdlProperty().setName("bookGenre")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty pagesAmount = new CsdlProperty().setName("pagesAmount")
-                .setType(EdmPrimitiveTypeKind.Int32.getFullQualifiedName());
-
-        CsdlEntityType entityType = new CsdlEntityType();
-        entityType.setName(ET_BOOK_CREDENTIALS_NAME);
-        entityType.setProperties(Arrays.asList(id, authorSurname, authorName, title, bookGenre, pagesAmount));
-        entityType.setKey(Collections.singletonList(new CsdlPropertyRef().setName("id")));
-
-        return entityType;
-    }
-
-    private CsdlEntityType getBookReservedEntityType() { 	         
-    	
-        CsdlProperty title = new CsdlProperty().setName("title")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty authorSurname = new CsdlProperty().setName("authorSurname")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty authorName = new CsdlProperty().setName("authorName")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty bookGenre = new CsdlProperty().setName("bookGenre")
-                .setType(EdmPrimitiveTypeKind.String.getFullQualifiedName());
-        CsdlProperty reservedDate = new CsdlProperty().setName("reservedDate")
-                .setType(EdmPrimitiveTypeKind.Date.getFullQualifiedName());
-
-        CsdlEntityType entityType = new CsdlEntityType();
-        entityType.setName(ET_BOOK_RESERVED_NAME);
-        entityType.setProperties(Arrays.asList(title, authorSurname, authorName, bookGenre, reservedDate));
-        entityType.setKey(Collections.singletonList(new CsdlPropertyRef().setName("title")));
-
-        return entityType;
-    }
+	@Override
+	public CsdlEntityContainerInfo getEntityContainerInfo(FullQualifiedName name) {
+		if (name == null || name.equals(CONTAINER)) {
+			return new CsdlEntityContainerInfo().setContainerName(CONTAINER);
+		}
+		return null;
+	}
 }

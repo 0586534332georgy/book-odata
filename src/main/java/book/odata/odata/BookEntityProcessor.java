@@ -1,179 +1,194 @@
 package book.odata.odata;
 
-import java.io.InputStream;
-import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import org.apache.olingo.commons.api.data.ContextURL;
+import org.apache.olingo.commons.api.data.ContextURL.Suffix;
 import org.apache.olingo.commons.api.data.Entity;
-import org.apache.olingo.commons.api.data.Property;
-import org.apache.olingo.commons.api.data.ValueType;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
-import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataApplicationException;
-import org.apache.olingo.server.api.ODataLibraryException;
 import org.apache.olingo.server.api.ODataRequest;
 import org.apache.olingo.server.api.ODataResponse;
 import org.apache.olingo.server.api.ServiceMetadata;
 import org.apache.olingo.server.api.processor.EntityProcessor;
 import org.apache.olingo.server.api.serializer.EntitySerializerOptions;
-import org.apache.olingo.server.api.serializer.ODataSerializer;
+import org.apache.olingo.server.api.serializer.SerializerException;
 import org.apache.olingo.server.api.serializer.SerializerResult;
 import org.apache.olingo.server.api.uri.UriInfo;
-import org.apache.olingo.server.api.uri.UriParameter;
 import org.apache.olingo.server.api.uri.UriResource;
 import org.apache.olingo.server.api.uri.UriResourceEntitySet;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
 import org.springframework.stereotype.Component;
 
-import book.odata.dto.BookCredentialsDto;
-import book.odata.dto.BookDto;
 import book.odata.entity.Book;
 import book.odata.service.BookService;
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class BookEntityProcessor implements EntityProcessor {
 
-    @Autowired
-    private BookService bookService;
+	private final BookService bookService;
+	private OData odata;
+	private ServiceMetadata serviceMetadata;
 
-    private OData odata;
-    private ServiceMetadata serviceMetadata;
+	@Override
+	public void init(OData odata, ServiceMetadata serviceMetadata) {
+		this.odata = odata;
+		this.serviceMetadata = serviceMetadata;
+	}
 
-    @Override
-    public void init(OData odata, ServiceMetadata serviceMetadata) {
-        this.odata = odata;
-        this.serviceMetadata = serviceMetadata;
-    }
+	@Override
+	public void readEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat)
+			throws ODataApplicationException, SerializerException {
+		
+		List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+		
+		// Получаем основную сущность (Books)
+		UriResourceEntitySet entitySet = (UriResourceEntitySet) resourceParts.get(0);
+		int id = Integer.parseInt(entitySet.getKeyPredicates().get(0).getText());
+		Book book = bookService.findById(id);
+		
+		if (book == null) {
+			throw new ODataApplicationException("Book not found", 
+				HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH);
+		}
 
-    @Override
-    public void readEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat)
-            throws ODataApplicationException, ODataLibraryException {
+		// Проверяем, есть ли навигационное свойство
+		if (resourceParts.size() > 1 && resourceParts.get(1) instanceof UriResourceNavigation) {
+			UriResourceNavigation navigationResource = (UriResourceNavigation) resourceParts.get(1);
+			String navigationProperty = navigationResource.getProperty().getName();
+			
+			handleNavigationProperty(book, navigationProperty, response, responseFormat, uriInfo);
+		} else {
+			// Обычный запрос к сущности
+			handleEntityRequest(book, entitySet, response, responseFormat, uriInfo);
+		}
+	}
 
-        // Retrieve the requested EntitySet from the uriInfo
-        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
-        UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourceParts.get(0);
-        EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
+	private void handleNavigationProperty(Book book, String navigationProperty, ODataResponse response, 
+			ContentType responseFormat, UriInfo uriInfo) throws ODataApplicationException, SerializerException {
+		
+		Entity entity = null;
+		EdmEntitySet edmEntitySet = null;
+		
+		try {
+			switch (navigationProperty.toLowerCase()) {
+				case "credential":
+					if (book.getCredential() == null) {
+						throw new ODataApplicationException("Credential not found for this book", 
+							HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH);
+					}
+					entity = BookEntityMapper.toCredentialEntity(book.getCredential(), odata);
+					edmEntitySet = serviceMetadata.getEdm().getEntityContainer()
+						.getEntitySet(BookEdmProvider.ES_CREDENTIALS_NAME);
+					break;
+					
+				case "status":
+					if (book.getStatus() == null) {
+						throw new ODataApplicationException("Status not found for this book", 
+							HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH);
+					}
+					entity = BookEntityMapper.toStatusEntity(book.getStatus(), odata);
+					edmEntitySet = serviceMetadata.getEdm().getEntityContainer()
+						.getEntitySet(BookEdmProvider.ES_STATUSES_NAME);
+					break;
+					
+				default:
+					throw new ODataApplicationException("Unknown navigation property: " + navigationProperty, 
+						HttpStatusCode.BAD_REQUEST.getStatusCode(), Locale.ENGLISH);
+			}
+			
+			ContextURL contextUrl = ContextURL.with().entitySet(edmEntitySet).suffix(Suffix.ENTITY).build();
+			EntitySerializerOptions opts = EntitySerializerOptions.with().contextURL(contextUrl).build();
 
-        // Extract the key from the request
-        List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
-        Entity entity = getData(edmEntitySet, keyPredicates);
+			SerializerResult serializerResult = odata
+				.createSerializer(responseFormat)
+				.entity(serviceMetadata, edmEntitySet.getEntityType(), entity, opts);
 
-        if (entity == null) {
-            throw new ODataApplicationException("Entity not found", HttpStatusCode.NOT_FOUND.getStatusCode(),
-                    Locale.ENGLISH);
-        }
+			response.setContent(serializerResult.getContent());
+			response.setStatusCode(HttpStatusCode.OK.getStatusCode());
+			response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
+			
+		} catch (URISyntaxException e) {
+			throw new ODataApplicationException("Invalid URI for navigation property",
+				HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), Locale.ENGLISH);
+		}
+	}
 
-        // Serialize
-        ODataSerializer serializer = odata.createSerializer(responseFormat);
-        EdmEntityType edmEntityType = edmEntitySet.getEntityType();
-        ContextURL contextUrl = ContextURL.with().entitySet(edmEntitySet).build();
+	private void handleEntityRequest(Book book, UriResourceEntitySet entitySet, ODataResponse response, 
+			ContentType responseFormat, UriInfo uriInfo) throws ODataApplicationException, SerializerException {
+		
+		// Определяем, какие свойства нужно расширить
+		Set<String> expandedProperties = getExpandedProperties(uriInfo);
+		
+		Entity entity;
+		try {
+			entity = BookEntityMapper.toEntity(book, entitySet.getEntityType(), odata, expandedProperties);
+		} catch (URISyntaxException e) {
+			throw new ODataApplicationException("Invalid URI for entity ID",
+				HttpStatusCode.INTERNAL_SERVER_ERROR.getStatusCode(), Locale.ENGLISH);
+		}
 
-        EntitySerializerOptions options = EntitySerializerOptions.with().contextURL(contextUrl).build();
-        SerializerResult serializerResult = serializer.entity(serviceMetadata, edmEntityType, entity, options);
-        InputStream serializedContent = serializerResult.getContent();
+		EdmEntitySet edmEntitySet = entitySet.getEntitySet();
+		
+		ContextURL contextUrl = ContextURL.with().entitySet(edmEntitySet).suffix(Suffix.ENTITY).build();
+		EntitySerializerOptions.Builder optsBuilder = EntitySerializerOptions.with().contextURL(contextUrl);
+		
+		// Добавляем опции select и expand если есть
+		if (uriInfo.getSelectOption() != null) {
+			optsBuilder.select(uriInfo.getSelectOption());
+		}
+		if (uriInfo.getExpandOption() != null) {
+			optsBuilder.expand(uriInfo.getExpandOption());
+		}
+		
+		EntitySerializerOptions opts = optsBuilder.build();
 
-        // Configure the response object
-        response.setContent(serializedContent);
-        response.setStatusCode(HttpStatusCode.OK.getStatusCode());
-        response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
-    }
+		SerializerResult serializerResult = odata
+			.createSerializer(responseFormat)
+			.entity(serviceMetadata, edmEntitySet.getEntityType(), entity, opts);
 
-    private Entity getData(EdmEntitySet edmEntitySet, List<UriParameter> keyPredicates) {
-        String entitySetName = edmEntitySet.getName();
-        
-        if (BookEdmProvider.ES_BOOKS_NAME.equals(entitySetName)) {
-            String title = getKeyValue(keyPredicates, "title");
-            List<BookDto> books = bookService.getAll2();
-            for (BookDto book : books) {
-                if (book.getTitle().equals(title)) {
-                    return createBookEntity(book);
-                }
-            }
-        } else if (BookEdmProvider.ES_BOOK_CREDENTIALS_NAME.equals(entitySetName)) {
-            Integer id = Integer.valueOf(getKeyValue(keyPredicates, "id"));
-            List<BookCredentialsDto> books = bookService.getBooksByGenre(book.odata.api.BookGenreEnum.Fantasy);
-            for (BookCredentialsDto book : books) {
-                if (book.getId().equals(id)) {
-                    return createBookCredentialsEntity(book);
-                }
-            }
-        }
-        
-        return null;
-    }
+		response.setContent(serializerResult.getContent());
+		response.setStatusCode(HttpStatusCode.OK.getStatusCode());
+		response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
+	}
 
-    private String getKeyValue(List<UriParameter> keyPredicates, String keyName) {
-        for (UriParameter keyPredicate : keyPredicates) {
-            if (keyPredicate.getName().equals(keyName)) {
-                return keyPredicate.getText().replace("'", ""); // Remove quotes for string values
-            }
-        }
-        return null;
-    }
+	private Set<String> getExpandedProperties(UriInfo uriInfo) {
+		Set<String> expandedProperties = new HashSet<>();
+		
+		if (uriInfo.getExpandOption() != null) {
+			uriInfo.getExpandOption().getExpandItems().forEach(item -> {
+				if (item.getResourcePath() != null && !item.getResourcePath().getUriResourceParts().isEmpty()) {
+					String propertyName = item.getResourcePath().getUriResourceParts().get(0).getSegmentValue();
+					expandedProperties.add(propertyName.toLowerCase());
+				}
+			});
+		}
+		
+		return expandedProperties;
+	}
 
-    private Entity createBookEntity(BookDto book) {
-        Entity entity = new Entity()
-                .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
-                .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
-                .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
-                .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null));
+	@Override
+	public void createEntity(ODataRequest r, ODataResponse s, UriInfo u, ContentType requestFormat,
+			ContentType responseFormat) {
+	}
 
-        entity.setId(createId("Books", book.getTitle()));
-        return entity;
-    }
+	@Override
+	public void updateEntity(ODataRequest r, ODataResponse s, UriInfo u, ContentType requestFormat,
+			ContentType responseFormat) {
+	}
 
-    private Entity createBookCredentialsEntity(BookCredentialsDto book) {
-        Entity entity = new Entity()
-                .addProperty(new Property(null, "id", ValueType.PRIMITIVE, book.getId()))
-                .addProperty(new Property(null, "authorSurname", ValueType.PRIMITIVE, book.getAuthorSurname()))
-                .addProperty(new Property(null, "authorName", ValueType.PRIMITIVE, book.getAuthorName()))
-                .addProperty(new Property(null, "title", ValueType.PRIMITIVE, book.getTitle()))
-                .addProperty(new Property(null, "bookGenre", ValueType.PRIMITIVE, 
-                    book.getBookGenre() != null ? book.getBookGenre().toString() : null))
-                .addProperty(new Property(null, "pagesAmount", ValueType.PRIMITIVE, book.getPagesAmount()));
-
-        entity.setId(createId("BookCredentials", book.getId()));
-        return entity;
-    }
-
-    private URI createId(String entitySetName, Object id) {
-        try {
-            return new URI(entitySetName + "(" + String.valueOf(id) + ")");
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Unable to create id for entity: " + entitySetName, e);
-        }
-    }
-
-    @Override
-    public void createEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,
-            ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
-        // Implementation for POST requests - creating new entities
-        throw new ODataApplicationException("Create operation is not supported yet", 
-                HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.ENGLISH);
-    }
-
-    @Override
-    public void updateEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType requestFormat,
-            ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
-        // Implementation for PUT/PATCH requests - updating entities
-        throw new ODataApplicationException("Update operation is not supported yet", 
-                HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.ENGLISH);
-    }
-
-    @Override
-    public void deleteEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo)
-            throws ODataApplicationException, ODataLibraryException {
-        // Implementation for DELETE requests
-        throw new ODataApplicationException("Delete operation is not supported yet", 
-                HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.ENGLISH);
-    }
-    
+	@Override
+	public void deleteEntity(ODataRequest r, ODataResponse s, UriInfo u) {
+	}	
+	
 }
